@@ -1,5 +1,5 @@
 # Firebase 및 API Key 설정 파일 제외
-config.js
+# config.js
 
 # IDE 설정 및 OS 파일 제외
 .vscode/
