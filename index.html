@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>숲속의 사목 대전 : 바둑판 좌표평면</title>
+  
+  <!-- SEO 메타 태그 -->
+  <meta name="description" content="중학교 1학년 수학 - 순서쌍과 좌표를 실시간 멀티플레이어 사목 게임으로 재미있게 학습해보세요. 숲속의 현자 Gemini가 맞춤형 힌트를 제공합니다.">
+  <meta name="keywords" content="수학, 좌표평면, 순서쌍, 사목, Connect 4, 중1 수학, 에듀테크, 숲속의 사목 대전">
+  
+  <!-- Google Fonts & Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Chart.js (교사용 통계용) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- 스타일시트 연동 -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  
+  <!-- 배경 애니메이션 요소들 -->
+  <div class="forest-bg-elements">
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+    <div class="firefly"></div>
+  </div>
+
+  <div class="app-container">
+    <!-- 헤더 영역 -->
+    <header class="app-header">
+      <div class="logo-area">
+        <i data-lucide="trees" class="header-icon"></i>
+        <h1>숲속의 사목 대전 <span class="subtitle">바둑판 좌표평면</span></h1>
+      </div>
+      <div class="header-actions">
+        <button id="teacher-dashboard-btn" class="btn btn-secondary">
+          <i data-lucide="bar-chart-2"></i> 교사 대시보드
+        </button>
+      </div>
+    </header>
+
+    <!-- 메인 콘텐츠 영역 (화면 전환 제어) -->
+    <main class="main-content">
+      
+      <!-- 1. 로비 / 대기실 화면 -->
+      <section id="lobby-screen" class="screen active">
+        <div class="lobby-card card-glow">
+          <div class="lobby-welcome">
+            <div class="sage-avatar-large animate-bounce-slow">🧙‍♂️</div>
+            <h2>반갑구나, 젊은 수학자여!</h2>
+            <p>신비로운 숲속 바둑판 좌표평면에서 지혜의 돌을 놓아 사목(4목)을 완성해보세나.</p>
+          </div>
+          
+          <div class="lobby-form">
+            <div class="input-group">
+              <label for="player-name"><i data-lucide="user"></i> 나의 닉네임</label>
+              <input type="text" id="player-name" placeholder="닉네임을 입력하세요 (최대 8자)" maxlength="8">
+            </div>
+
+            <div class="lobby-actions">
+              <button id="create-room-btn" class="btn btn-primary btn-large">
+                <i data-lucide="plus-circle"></i> 새로운 방 만들기
+              </button>
+              
+              <div class="or-divider">
+                <span>또는</span>
+              </div>
+
+              <div class="join-group">
+                <input type="text" id="room-code-input" placeholder="방 코드 6자리 입력" maxlength="6">
+                <button id="join-room-btn" class="btn btn-accent">
+                  <i data-lucide="log-in"></i> 방 참여하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 대기방 대기 상태 (방 진입 후 게임 시작 전까지 표시) -->
+        <div id="waiting-room-panel" class="lobby-card card-glow hidden">
+          <div class="waiting-header">
+            <h3>방 코드: <span id="display-room-code" class="room-code-badge">------</span></h3>
+            <button id="copy-room-code-btn" class="btn btn-mini" title="복사하기">
+              <i data-lucide="copy"></i>
+            </button>
+          </div>
+          
+          <p class="waiting-desc">친구가 방 코드를 입력하고 들어올 수 있도록 공유해주세요. (2~4명 플레이 가능)</p>
+          
+          <div class="players-waiting-list">
+            <h4>참가 중인 수학자 목록</h4>
+            <ul id="waiting-players-ul">
+              <!-- 플레이어 동적 추가 -->
+            </ul>
+          </div>
+          
+          <div class="waiting-actions">
+            <button id="start-game-btn" class="btn btn-success btn-large" disabled>
+              <i data-lucide="play"></i> 대전 시작하기
+            </button>
+            <button id="leave-room-btn" class="btn btn-danger">
+              <i data-lucide="log-out"></i> 방 나가기
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 게임 플레이 화면 -->
+      <section id="game-screen" class="screen">
+        <div class="game-layout">
+          
+          <!-- 게임판 영역 (중앙 ~ 좌측) -->
+          <div class="game-board-area">
+            <!-- 게임 진행 정보 (상단바) -->
+            <div class="game-status-bar">
+              <div class="turn-indicator" id="current-turn-display">
+                <span class="pulse-indicator"></span> 
+                <span id="turn-player-name">로딩 중...</span>의 차례
+              </div>
+              <div class="rule-tip">
+                <i data-lucide="info"></i>
+                <span id="rule-tip-text">첫 돌은 자유롭게 놓을 수 있습니다.</span>
+              </div>
+            </div>
+
+            <div class="board-wrapper">
+              <!-- 사분면 힌트 배경 라벨 -->
+              <div class="quadrant-labels">
+                <div class="quadrant-label q1">제1사분면 (+, +)</div>
+                <div class="quadrant-label q2">제2사분면 (-, +)</div>
+                <div class="quadrant-label q3">제3사분면 (-, -)</div>
+                <div class="quadrant-label q4">제4사분면 (+, -)</div>
+              </div>
+
+              <!-- 실제 바둑판 좌표평면 -->
+              <div id="coordinate-board" class="coordinate-board">
+                <!-- x축, y축 눈금 및 라인이 JS를 통해 생성되거나 직접 SVG로 그려짐 -->
+                <svg class="board-grid-svg" width="100%" height="100%" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+                  <!-- JS에서 동적으로 격자 및 눈금을 그립니다 -->
+                </svg>
+                
+                <!-- 돌 배치 레이어 (바둑알 및 프리뷰 알) -->
+                <div id="stones-container" class="stones-container">
+                  <!-- 동적으로 돌(div)들이 생성됨 -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 컨트롤 패널 영역 (우측) -->
+          <div class="game-control-panel card-glow">
+            
+            <!-- 플레이어 정보 & 스코어 리스트 -->
+            <div class="players-panel-section">
+              <h3><i data-lucide="users"></i> 대전 참가자</h3>
+              <div id="players-list-container" class="players-list-container">
+                <!-- 참가자들 리스트 (아이콘, 이름, 턴 표시) -->
+              </div>
+            </div>
+            
+            <!-- 직전 수 정보 -->
+            <div class="last-move-section">
+              <h4>이전 참가자의 돌 위치</h4>
+              <div id="last-move-display" class="last-move-badge">
+                <i data-lucide="help-circle"></i> 아직 돌이 놓이지 않았습니다.
+              </div>
+            </div>
+
+            <!-- 순서쌍 입력기 -->
+            <div class="coordinate-input-section">
+              <h3><i data-lucide="pencil-line"></i> 지혜의 순서쌍 입력</h3>
+              <p class="input-desc">선택할 좌표평면 교차점의 순서쌍을 완성하세요.</p>
+              
+              <div class="coordinate-form-wrapper">
+                <span class="parenthesis">(</span>
+                <div class="coordinate-input-field">
+                  <label for="coord-x">X 좌표</label>
+                  <input type="number" id="coord-x" min="-5" max="5" step="1" placeholder="x">
+                </div>
+                <span class="comma">,</span>
+                <div class="coordinate-input-field">
+                  <label for="coord-y">Y 좌표</label>
+                  <input type="number" id="coord-y" min="-5" max="5" step="1" placeholder="y">
+                </div>
+                <span class="parenthesis">)</span>
+              </div>
+              
+              <!-- 실시간 검증 경고 메시지 영역 -->
+              <div id="input-validation-warning" class="validation-warning hidden">
+                <i data-lucide="alert-triangle"></i> X좌표와 Y좌표를 둘 다 변경할 수 없습니다!
+              </div>
+
+              <button id="submit-coordinate-btn" class="btn btn-success btn-large btn-block" disabled>
+                <i data-lucide="check-circle-2"></i> 돌 놓기 제출
+              </button>
+            </div>
+
+            <!-- 숲속의 현자 (Gemini AI) 힌트 창 -->
+            <div class="sage-hint-section">
+              <div class="sage-header">
+                <span class="sage-avatar">🧙‍♂️</span>
+                <div class="sage-title-info">
+                  <h4>숲속의 현자</h4>
+                  <span class="sage-status">지혜의 힌트 대기 중</span>
+                </div>
+              </div>
+              
+              <div class="sage-chat-history" id="sage-chat-history">
+                <div class="chat-message system">
+                  <p>좌표평면 위에서 돌을 놓고 싶은 곳을 클릭하면 입력창에 자동으로 입력된단다. 틀려도 괜찮으니 차근차근 순서쌍을 적어보려무나.</p>
+                </div>
+              </div>
+            </div>
+            
+            <div class="game-footer-actions">
+              <button id="exit-game-btn" class="btn btn-danger btn-block">
+                <i data-lucide="log-out"></i> 게임 나가기
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 3. 교사용 통계 대시보드 모달 -->
+  <div id="teacher-dashboard-modal" class="modal-overlay">
+    <div class="modal-content card-glow">
+      <div class="modal-header">
+        <h2><i data-lucide="graduation-cap"></i> 숲속의 교실 대시보드 <span class="badge">학습 분석</span></h2>
+        <button id="close-dashboard-btn" class="modal-close-btn">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        
+        <!-- 교사 비밀번호 인증 영역 (간이) -->
+        <div id="teacher-auth-section" class="auth-section">
+          <p>교사 전용 대시보드입니다. 인증번호를 입력해 주세요.</p>
+          <div class="auth-input-group">
+            <input type="password" id="teacher-password" placeholder="인증번호 입력 (기본값: 1234)">
+            <button id="submit-auth-btn" class="btn btn-primary">인증</button>
+          </div>
+          <p id="auth-error-msg" class="error-text hidden">인증번호가 올바르지 않습니다.</p>
+        </div>
+
+        <!-- 대시보드 통계 콘텐츠 (인증 성공 후 활성화) -->
+        <div id="teacher-stats-section" class="stats-section hidden">
+          
+          <div class="stats-summary-cards">
+            <div class="stat-card">
+              <div class="stat-icon-wrapper q-confused"><i data-lucide="help-circle"></i></div>
+              <div class="stat-info">
+                <span class="stat-label">총 오답 제출 건수</span>
+                <span id="stat-total-errors" class="stat-value">0</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper ai-usage"><i data-lucide="message-square"></i></div>
+              <div class="stat-info">
+                <span class="stat-label">AI 힌트 이용률</span>
+                <span id="stat-ai-ratio" class="stat-value">0%</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper most-error"><i data-lucide="alert-circle"></i></div>
+              <div class="stat-info">
+                <span class="stat-label">가장 취약한 사분면</span>
+                <span id="stat-worst-quadrant" class="stat-value">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-container-card">
+              <h3><i data-lucide="pie-chart"></i> 학생들이 가장 많이 헷갈려하는 사분면</h3>
+              <div class="chart-wrapper">
+                <canvas id="quadrant-chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-container-card">
+              <h3><i data-lucide="trending-up"></i> AI 힌트 이용 빈도</h3>
+              <div class="chart-wrapper">
+                <canvas id="hint-usage-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="error-log-table-container">
+            <h3><i data-lucide="list"></i> 실시간 오답 분석 로그 (최근 50건)</h3>
+            <div class="table-scroll">
+              <table class="error-log-table">
+                <thead>
+                  <tr>
+                    <th>일시</th>
+                    <th>세션 ID</th>
+                    <th>목표 좌표 (클릭)</th>
+                    <th>입력 좌표 (오답)</th>
+                    <th>오답 유형 분석</th>
+                    <th>AI 힌트 여부</th>
+                  </tr>
+                </thead>
+                <tbody id="error-logs-tbody">
+                  <!-- 데이터 동적 추가 -->
+                  <tr>
+                    <td colspan="6" class="no-data">오답 데이터 분석 중입니다...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 알림 팝업 토스트 -->
+  <div id="toast-message" class="toast hidden">아름다운 알림 메시지</div>
+
+  <!-- Firebase 및 게임 로직 JS 모듈 연동 -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
