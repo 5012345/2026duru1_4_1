@@ -4,7 +4,7 @@ const CONFIG = {
   FIREBASE_CONFIG: {
     apiKey: "AIzaSyBtd0WW39hBG-RbL1TfxMSO4vZPjRiOg34",
     authDomain: "duru1-4-1.firebaseapp.com",
-    databaseURL: "YOUR_FIREBASE_DATABASE_URL",
+    databaseURL: "https://duru1-4-1-default-rtdb.firebaseio.com",
     projectId: "duru1-4-1",
     storageBucket: "duru1-4-1.firebasestorage.app",
     messagingSenderId: "172898152499",
