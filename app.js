@@ -13,14 +13,18 @@ let app, db, fs;
 let isFirebaseConfigured = false;
 
 try {
-  if (CONFIG.FIREBASE_CONFIG.apiKey && CONFIG.FIREBASE_CONFIG.apiKey !== "YOUR_FIREBASE_API_KEY") {
-    app = initializeApp(CONFIG.FIREBASE_CONFIG);
+  const fbConf = CONFIG.FIREBASE_CONFIG;
+  const hasValidApiKey = fbConf && fbConf.apiKey && fbConf.apiKey !== "YOUR_FIREBASE_API_KEY" && fbConf.apiKey.trim() !== "";
+  const hasValidDbUrl = fbConf && fbConf.databaseURL && fbConf.databaseURL.startsWith("https://");
+
+  if (hasValidApiKey && hasValidDbUrl) {
+    app = initializeApp(fbConf);
     db = getDatabase(app);
     fs = getFirestore(app);
     isFirebaseConfigured = true;
     console.log("Firebase가 성공적으로 초기화되었습니다.");
   } else {
-    console.warn("Firebase 설정이 정의되지 않았습니다. 로컬 데모 모드로 작동합니다.");
+    console.warn("Firebase 설정이 올바르지 않거나 정의되지 않았습니다. 로컬 데모 모드로 작동합니다.");
   }
 } catch (error) {
   console.error("Firebase 초기화 에러:", error);
@@ -1543,6 +1547,16 @@ function checkFirebaseConnection() {
     return false;
   }
   return true;
+}
+
+function copyRoomCode() {
+  if (!currentRoomId) return;
+  navigator.clipboard.writeText(currentRoomId).then(() => {
+    showToast("방 코드가 클립보드에 복사되었습니다!");
+  }).catch(err => {
+    console.error("클립보드 복사 실패:", err);
+    showToast(`방 코드: ${currentRoomId}`);
+  });
 }
 
 function generateRoomCode() {
