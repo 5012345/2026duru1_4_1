@@ -878,13 +878,15 @@ body {
 }
 
 .btn-primary {
-  background: var(--forest-mid);
+  background: #387a3d;
   color: var(--white);
+  box-shadow: 0 4px 14px rgba(56, 122, 61, 0.35);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--forest-dark);
-  transform: translateY(-1px);
+  background: #2b5d2e;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(56, 122, 61, 0.45);
 }
 
 .btn-accent {

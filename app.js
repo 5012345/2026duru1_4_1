@@ -1,8 +1,29 @@
-import CONFIG from './config.js';
+// ==========================================
+// 1. 설정 및 Firebase & Gemini SDK 초기화
+// ==========================================
 
-// ==========================================
-// 1. Firebase & Gemini SDK 설정 및 초기화
-// ==========================================
+let CONFIG = {
+  FIREBASE_CONFIG: {
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_FIREBASE_AUTH_DOMAIN",
+    databaseURL: "YOUR_FIREBASE_DATABASE_URL",
+    projectId: "YOUR_FIREBASE_PROJECT_ID",
+    storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID",
+    appId: "YOUR_FIREBASE_APP_ID",
+    measurementId: "YOUR_FIREBASE_MEASUREMENT_ID"
+  },
+  GEMINI_API_KEY: "YOUR_GEMINI_API_KEY"
+};
+
+// 동적 임포트(Top-level await)를 활용해 config.js 누적 에러로 스크립트가 중단되는 현상 완벽 방지
+try {
+  const configModule = await import('./config.js');
+  CONFIG = configModule.default;
+  console.log("설정 파일(config.js)을 성공적으로 불러왔습니다.");
+} catch (e) {
+  console.warn("설정 파일(config.js)이 없거나 불러올 수 없어 로컬 기본값으로 작동합니다.", e);
+}
 
 // Firebase 모듈 동적 로드 (안정성을 위해 공식 CDN 사용)
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
