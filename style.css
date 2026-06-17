@@ -59,6 +59,7 @@ body {
   box-shadow: 0 0 10px 4px rgba(242, 201, 76, 0.6);
   opacity: 0;
   animation: floatFirefly 8s infinite ease-in-out;
+  will-change: transform, opacity; /* GPU 3D 렌더링 최적화 지시 */
 }
 
 /* 여러 개의 반딧불이 난수 효과 */
@@ -72,10 +73,10 @@ body {
 .firefly:nth-child(8) { left: 40%; top: 45%; animation-delay: 5s; animation-duration: 10s; }
 
 @keyframes floatFirefly {
-  0% { transform: translateY(0) translateX(0) scale(0.8); opacity: 0; }
+  0% { transform: translate3d(0, 0, 0) scale(0.8); opacity: 0; }
   30% { opacity: 0.8; }
-  60% { transform: translateY(-60px) translateX(30px) scale(1.2); opacity: 0.6; }
-  100% { transform: translateY(-120px) translateX(-10px) scale(0.8); opacity: 0; }
+  60% { transform: translate3d(30px, -60px, 0) scale(1.2); opacity: 0.6; }
+  100% { transform: translate3d(-10px, -120px, 0) scale(0.8); opacity: 0; }
 }
 
 /* 컨테이너 및 헤더 */

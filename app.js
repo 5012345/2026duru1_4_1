@@ -58,6 +58,7 @@ let sessionId = localStorage.getItem('wood_connect4_session_id') || generateUUID
 localStorage.setItem('wood_connect4_session_id', sessionId);
 
 let isLocalMode = false;
+let roomUnsubscribe = null; // Firebase 실시간 리스너 해제용 함수 보관 변수
 let currentRoomId = null;
 let myPlayerId = sessionId; // 고유 ID로 세션 ID 사용
 let myName = "";
@@ -338,28 +339,33 @@ function handleCoordinateChange() {
   renderPreviewStone(xVal, yVal);
 }
 
-// 반투명 미리보기 돌 그리기
+// 반투명 미리보기 돌 그리기 (Element Reuse 패턴으로 렌더링 부하 최적화)
 function renderPreviewStone(x, y) {
-  // 기존 프리뷰 돌 제거
-  removePreviewStone();
-
-  // 만약 이미 그 자리에 돌이 존재하면 프리뷰를 안 그림
+  // 만약 이미 그 자리에 돌이 존재하면 프리뷰를 숨김
   if (roomState && roomState.stones && roomState.stones[`${x}_${y}`]) {
+    removePreviewStone();
     return;
   }
 
   const myDesign = getMyDesign();
   const pos = mathToPercent(x, y);
   
-  const preview = document.createElement('div');
-  preview.id = 'active-preview-stone';
+  let preview = document.getElementById('active-preview-stone');
+
+  if (!preview) {
+    // 엘리먼트가 없으면 새로 생성
+    preview = document.createElement('div');
+    preview.id = 'active-preview-stone';
+    stonesContainer.appendChild(preview);
+  }
+
+  // 기존 엘리먼트의 속성만 변경하여 DOM 재생성(Reflow) 방지
   preview.className = `stone preview-stone ${myDesign.class}`;
   preview.style.left = pos.x;
   preview.style.top = pos.y;
   preview.style.background = myDesign.color;
   preview.innerHTML = myDesign.emoji;
 
-  stonesContainer.appendChild(preview);
   prevCalculatedPreview = { x, y };
 }
 
@@ -585,8 +591,14 @@ async function handleJoinRoom() {
 
 // 방 실시간 구독
 function listenToRoom(roomId) {
+  // 이전 실시간 리스너 수신 해제하여 메모리 누수 완벽 차단
+  if (roomUnsubscribe) {
+    roomUnsubscribe();
+    roomUnsubscribe = null;
+  }
+
   const roomRef = ref(db, `rooms/${roomId}`);
-  onValue(roomRef, (snapshot) => {
+  roomUnsubscribe = onValue(roomRef, (snapshot) => {
     if (!snapshot.exists()) {
       // 방이 터졌거나 퇴장당한 경우 로비로 이동
       if (currentRoomId) {
@@ -683,6 +695,12 @@ function enterWaitingRoom(roomCode) {
 
 // 로비로 돌아가기 초기화
 function resetToLobby() {
+  // 방을 떠날 때 Firebase 실시간 리스너 해제하여 메모리 누수 방지
+  if (roomUnsubscribe) {
+    roomUnsubscribe();
+    roomUnsubscribe = null;
+  }
+
   currentRoomId = null;
   roomState = null;
   selectedTarget = null;
