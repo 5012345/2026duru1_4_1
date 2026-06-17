@@ -134,41 +134,39 @@ const playerDesigns = [
 // ==========================================
 // 4. 초기 실행 및 이벤트 바인딩
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-  // Lucide 아이콘 초기화
-  lucide.createIcons();
-  
-  // 닉네임 입력란 복원
-  const savedName = localStorage.getItem('wood_connect4_player_name');
-  if (savedName) playerNameInput.value = savedName;
+// Lucide 아이콘 초기화
+lucide.createIcons();
 
-  // 이벤트 바인딩
-  createRoomBtn.addEventListener('click', handleCreateRoom);
-  joinRoomBtn.addEventListener('click', handleJoinRoom);
-  copyRoomCodeBtn.addEventListener('click', copyRoomCode);
-  startGameBtn.addEventListener('click', handleStartGame);
-  leaveRoomBtn.addEventListener('click', handleLeaveRoom);
-  exitGameBtn.addEventListener('click', handleLeaveRoom);
-  
-  // 좌표 입력란 변경 시 실시간 미리보기 및 X/Y 동시 변경 검증
-  coordXInput.addEventListener('input', handleCoordinateChange);
-  coordYInput.addEventListener('input', handleCoordinateChange);
-  
-  // 제출 버튼에 Lodash 스타일 Debounce 적용 (1초)
-  submitCoordinateBtn.addEventListener('click', debounce(handleSubmitCoordinate, 1000));
-  
-  // 교사용 대시보드
-  teacherDashboardBtn.addEventListener('click', openDashboard);
-  closeDashboardBtn.addEventListener('click', closeDashboard);
-  submitAuthBtn.addEventListener('click', handleTeacherAuth);
-  teacherPasswordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') handleTeacherAuth();
-  });
-  
-  // 바둑판 드로잉 및 클릭 영역 세팅
-  drawBoard();
-  setupBoardInteractions();
+// 닉네임 입력란 복원
+const savedName = localStorage.getItem('wood_connect4_player_name');
+if (savedName) playerNameInput.value = savedName;
+
+// 이벤트 바인딩
+createRoomBtn.addEventListener('click', handleCreateRoom);
+joinRoomBtn.addEventListener('click', handleJoinRoom);
+copyRoomCodeBtn.addEventListener('click', copyRoomCode);
+startGameBtn.addEventListener('click', handleStartGame);
+leaveRoomBtn.addEventListener('click', handleLeaveRoom);
+exitGameBtn.addEventListener('click', handleLeaveRoom);
+
+// 좌표 입력란 변경 시 실시간 미리보기 및 X/Y 동시 변경 검증
+coordXInput.addEventListener('input', handleCoordinateChange);
+coordYInput.addEventListener('input', handleCoordinateChange);
+
+// 제출 버튼에 Lodash 스타일 Debounce 적용 (1초)
+submitCoordinateBtn.addEventListener('click', debounce(handleSubmitCoordinate, 1000));
+
+// 교사용 대시보드
+teacherDashboardBtn.addEventListener('click', openDashboard);
+closeDashboardBtn.addEventListener('click', closeDashboard);
+submitAuthBtn.addEventListener('click', handleTeacherAuth);
+teacherPasswordInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') handleTeacherAuth();
 });
+
+// 바둑판 드로잉 및 클릭 영역 세팅
+drawBoard();
+setupBoardInteractions();
 
 // ==========================================
 // 5. 바둑판 좌표평면 그리기 (SVG)
