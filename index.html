@@ -257,6 +257,31 @@
         <!-- 대시보드 통계 콘텐츠 (인증 성공 후 활성화) -->
         <div id="teacher-stats-section" class="stats-section hidden">
           
+          <!-- 실시간 대기방 원격 제어 관리 카드 -->
+          <div class="teacher-control-card" style="margin-bottom: 25px; border: 1px solid rgba(45, 90, 39, 0.15); padding: 18px; border-radius: 16px; background: rgba(45, 90, 39, 0.03);">
+            <h3 style="font-size: 1.05rem; color: var(--forest-dark); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="play-circle"></i> 학생 대기방 실시간 시작 관리
+            </h3>
+            <p style="font-size: 0.82rem; color: #555; margin-bottom: 12px;">현재 학생들이 방을 만들어 대기하고 있는 실시간 목록입니다. [시작] 버튼을 눌러 게임을 원격으로 시작시킬 수 있습니다.</p>
+            <div class="table-scroll">
+              <table class="error-log-table">
+                <thead>
+                  <tr>
+                    <th>방 코드</th>
+                    <th>현재 대기 인원</th>
+                    <th>참가자 닉네임</th>
+                    <th>원격 제어</th>
+                  </tr>
+                </thead>
+                <tbody id="waiting-rooms-tbody">
+                  <tr>
+                    <td colspan="4" class="no-data">학생 대기 방 리스트를 동기화하는 중...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div class="stats-summary-cards">
             <div class="stat-card">
               <div class="stat-icon-wrapper q-confused"><i data-lucide="help-circle"></i></div>

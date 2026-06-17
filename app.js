@@ -373,6 +373,18 @@ async function handleCreateRoom() {
     currentRoomId = "LOCAL_ROOM";
     isHost = true;
 
+    // 2인 중앙 초기 배치: 플레이어1 (0,0), 플레이어2 (1,0)
+    const stones = {};
+    stones["0_0"] = { playerId: myPlayerId, timestamp: Date.now() };
+    stones["1_0"] = { playerId: "bot_squirrel", timestamp: Date.now() };
+
+    const initialLastMove = {
+      x: 1,
+      y: 0,
+      playerId: "bot_squirrel",
+      emoji: playerDesigns[1].emoji
+    };
+
     roomState = {
       roomId: "LOCAL_ROOM",
       status: "playing",
@@ -391,8 +403,8 @@ async function handleCreateRoom() {
       },
       turnOrder: [myPlayerId, "bot_squirrel"],
       currentTurnIndex: 0,
-      lastMove: null,
-      stones: {},
+      lastMove: initialLastMove,
+      stones: stones,
       winner: null,
       createdAt: Date.now()
     };
@@ -402,7 +414,8 @@ async function handleCreateRoom() {
     gameScreen.classList.add('active');
     
     renderGameUI(roomState);
-    addSystemChatMessage("✨ 다람쥐 봇과 1:1 사목 대전을 시작합니다! 선공은 당신입니다.");
+    addSystemChatMessage("✨ 다람쥐 봇과 1:1 사목 대전을 시작합니다!");
+    addSystemChatMessage("🐿️ 봇의 시작 돌이 (1,0)에 놓여 있으므로 첫 턴 규칙이 바로 적용됩니다!");
     return;
   }
 
@@ -445,7 +458,53 @@ async function handleJoinRoom() {
   if (!validateName()) return;
 
   if (!isFirebaseConfigured) {
-    showToast("로컬 모드에서는 방을 직접 만들어 봇 대전을 플레이해 주세요.");
+    isLocalMode = true;
+    currentRoomId = "LOCAL_ROOM";
+    isHost = true;
+
+    // 2인 중앙 초기 배치: 플레이어1 (0,0), 플레이어2 (1,0)
+    const stones = {};
+    stones["0_0"] = { playerId: myPlayerId, timestamp: Date.now() };
+    stones["1_0"] = { playerId: "bot_squirrel", timestamp: Date.now() };
+
+    const initialLastMove = {
+      x: 1,
+      y: 0,
+      playerId: "bot_squirrel",
+      emoji: playerDesigns[1].emoji
+    };
+
+    roomState = {
+      roomId: "LOCAL_ROOM",
+      status: "playing",
+      hostId: myPlayerId,
+      players: {
+        [myPlayerId]: {
+          name: myName,
+          isHost: true,
+          emoji: playerDesigns[0].emoji
+        },
+        "bot_squirrel": {
+          name: "다람쥐 봇 🐿️",
+          isHost: false,
+          emoji: playerDesigns[1].emoji
+        }
+      },
+      turnOrder: [myPlayerId, "bot_squirrel"],
+      currentTurnIndex: 0,
+      lastMove: initialLastMove,
+      stones: stones,
+      winner: null,
+      createdAt: Date.now()
+    };
+
+    showToast("⚠️ Firebase 미설정으로 로컬 봇 대전 모드로 참여합니다.");
+    lobbyScreen.classList.remove('active');
+    gameScreen.classList.add('active');
+    
+    renderGameUI(roomState);
+    addSystemChatMessage("✨ 다람쥐 봇과 1:1 사목 대전을 시작합니다!");
+    addSystemChatMessage("🐿️ 봇의 시작 돌이 (1,0)에 놓여 있으므로 첫 턴 규칙이 바로 적용됩니다!");
     return;
   }
 
@@ -676,17 +735,73 @@ async function handleLeaveRoom() {
 async function handleStartGame() {
   if (!isHost || !currentRoomId) return;
 
-  const updates = {
-    status: "playing",
-    currentTurnIndex: 0
-  };
-
   try {
+    // 실시간 DB에서 현재 참여 인원을 최신 조회
+    const snapshot = await get(ref(db, `rooms/${currentRoomId}`));
+    if (!snapshot.exists()) return;
+
+    const room = snapshot.val();
+    const turnOrder = room.turnOrder || [];
+    const playersMap = room.players || {};
+
+    const { stones, lastMove } = calculateInitialGameSetup(turnOrder, playersMap);
+
+    const updates = {
+      status: "playing",
+      currentTurnIndex: 0,
+      stones: stones,
+      lastMove: lastMove
+    };
+
     await update(ref(db, `rooms/${currentRoomId}`), updates);
   } catch (error) {
     console.error("게임 시작 에러:", error);
     showToast("게임을 시작할 수 없습니다.");
   }
+}
+
+// 인원수에 맞춰 판 중앙에 각자 돌 세팅 및 lastMove 설정 헬퍼
+function calculateInitialGameSetup(turnOrder, playersMap) {
+  const pCount = turnOrder.length;
+  const stones = {};
+  let lastMove = null;
+
+  if (pCount === 2) {
+    // 2인 배치: 플레이어1 (0,0), 플레이어2 (1,0)
+    stones["0_0"] = { playerId: turnOrder[0], timestamp: Date.now() };
+    stones["1_0"] = { playerId: turnOrder[1], timestamp: Date.now() };
+    lastMove = {
+      x: 1,
+      y: 0,
+      playerId: turnOrder[1],
+      emoji: playersMap[turnOrder[1]]?.emoji || playerDesigns[1].emoji
+    };
+  } else if (pCount === 3) {
+    // 3인 배치: 플레이어1 (0,0), 플레이어2 (1,0), 플레이어3 (0,1)
+    stones["0_0"] = { playerId: turnOrder[0], timestamp: Date.now() };
+    stones["1_0"] = { playerId: turnOrder[1], timestamp: Date.now() };
+    stones["0_1"] = { playerId: turnOrder[2], timestamp: Date.now() };
+    lastMove = {
+      x: 0,
+      y: 1,
+      playerId: turnOrder[2],
+      emoji: playersMap[turnOrder[2]]?.emoji || playerDesigns[2].emoji
+    };
+  } else if (pCount >= 4) {
+    // 4인 배치: 플레이어1 (0,0), 플레이어2 (1,0), 플레이어3 (0,1), 플레이어4 (1,1)
+    stones["0_0"] = { playerId: turnOrder[0], timestamp: Date.now() };
+    stones["1_0"] = { playerId: turnOrder[1], timestamp: Date.now() };
+    stones["0_1"] = { playerId: turnOrder[2], timestamp: Date.now() };
+    stones["1_1"] = { playerId: turnOrder[3], timestamp: Date.now() };
+    lastMove = {
+      x: 1,
+      y: 1,
+      playerId: turnOrder[3],
+      emoji: playersMap[turnOrder[3]]?.emoji || playerDesigns[3].emoji
+    };
+  }
+
+  return { stones, lastMove };
 }
 
 // ==========================================
@@ -1308,6 +1423,9 @@ function handleTeacherAuth() {
 
 // Firestore 데이터 로드 및 차트 그리기
 async function loadAndRenderTeacherStats() {
+  // 실시간 대기방 목록 동기화 호출
+  syncWaitingRoomsForTeacher();
+
   if (!isFirebaseConfigured || !fs) {
     // 오프라인 모드일 때 로컬에 저장된 로그 기반 시뮬레이션
     const logs = JSON.parse(localStorage.getItem('wood_connect4_analytics') || '[]');
@@ -1327,6 +1445,168 @@ async function loadAndRenderTeacherStats() {
     showToast("Firestore 데이터를 불러오는 데 실패했습니다.");
   }
 }
+
+// 교사용 실시간 대기방 목록 동기화
+function syncWaitingRoomsForTeacher() {
+  const tbody = document.getElementById('waiting-rooms-tbody');
+  if (!tbody) return;
+
+  if (!isFirebaseConfigured) {
+    // 로컬 모드일 때의 가상 대기방 2개 출력 및 시뮬레이션 연동
+    tbody.innerHTML = `
+      <tr>
+        <td style="font-family:var(--font-english); font-weight:bold;">DEMO_01</td>
+        <td>3명 대기 중</td>
+        <td>김철수(🌰), 이영희(🍃), 박민수(🍁)</td>
+        <td>
+          <button class="btn btn-success btn-mini" onclick="window.teacherStartRoomLocal('DEMO_01', 3)">
+            <i data-lucide="play" style="width:12px; height:12px;"></i> 시작
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--font-english); font-weight:bold;">DEMO_02</td>
+        <td>4명 대기 중</td>
+        <td>최수민(🌰), 정다은(🍃), 임하늘(🍁), 윤바다(🪨)</td>
+        <td>
+          <button class="btn btn-success btn-mini" onclick="window.teacherStartRoomLocal('DEMO_02', 4)">
+            <i data-lucide="play" style="width:12px; height:12px;"></i> 시작
+          </button>
+        </td>
+      </tr>
+    `;
+    lucide.createIcons();
+    return;
+  }
+
+  // Firebase 실시간 DB /rooms 쿼리
+  const roomsRef = ref(db, 'rooms');
+  onValue(roomsRef, (snapshot) => {
+    tbody.innerHTML = "";
+    if (!snapshot.exists()) {
+      tbody.innerHTML = `<tr><td colspan="4" class="no-data">현재 개설된 방이 없습니다.</td></tr>`;
+      return;
+    }
+
+    const rooms = snapshot.val();
+    let hasWaitingRooms = false;
+
+    Object.keys(rooms).forEach(roomId => {
+      const room = rooms[roomId];
+      if (room.status === "waiting") {
+        hasWaitingRooms = true;
+        const playerNames = Object.values(room.players || {}).map(p => p.name).join(", ");
+        const playerNum = Object.keys(room.players || {}).length;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family:var(--font-english); font-weight:bold; color:var(--wood-dark);">${roomId}</td>
+          <td><span style="font-weight:bold;">${playerNum}명</span> 대기 중</td>
+          <td>${escapeHtml(playerNames)}</td>
+          <td>
+            <button class="btn btn-success btn-mini start-room-remote-btn" data-room-id="${roomId}">
+              <i data-lucide="play" style="width:12px; height:12px;"></i> 시작
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      }
+    });
+
+    if (!hasWaitingRooms) {
+      tbody.innerHTML = `<tr><td colspan="4" class="no-data">학생들이 대기실에 입장하기를 기다리는 중...</td></tr>`;
+    } else {
+      // 리스너 바인딩
+      const btns = tbody.querySelectorAll('.start-room-remote-btn');
+      btns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const rId = btn.getAttribute('data-room-id');
+          teacherStartRoom(rId);
+        });
+      });
+      lucide.createIcons();
+    }
+  });
+}
+
+// 교사 원격 시작 처리
+async function teacherStartRoom(roomId) {
+  try {
+    const snapshot = await get(ref(db, `rooms/${roomId}`));
+    if (!snapshot.exists()) return;
+
+    const room = snapshot.val();
+    const turnOrder = room.turnOrder || [];
+    const playersMap = room.players || {};
+
+    const { stones, lastMove } = calculateInitialGameSetup(turnOrder, playersMap);
+
+    const updates = {
+      status: "playing",
+      currentTurnIndex: 0,
+      stones: stones,
+      lastMove: lastMove
+    };
+
+    await update(ref(db, `rooms/${roomId}`), updates);
+    showToast(`방 [${roomId}] 게임이 교사에 의해 원격 시작되었습니다!`);
+  } catch (error) {
+    console.error("교사 원격 시작 에러:", error);
+    showToast("해당 게임을 시작하지 못했습니다.");
+  }
+}
+
+// 로컬 모드일 때의 교사 방 시작 시뮬레이션 (다자간 봇 플레이)
+window.teacherStartRoomLocal = function(roomId, pCount) {
+  closeDashboard();
+  isLocalMode = true;
+  currentRoomId = roomId;
+  isHost = true;
+
+  // 가상의 다자간 턴 구성
+  const turnOrder = [myPlayerId];
+  
+  if (!myName) {
+    myName = playerNameInput.value.trim() || "나";
+  }
+
+  const players = {
+    [myPlayerId]: { name: myName, isHost: true, emoji: playerDesigns[0].emoji }
+  };
+
+  for (let i = 2; i <= pCount; i++) {
+    const botId = `bot_${i}`;
+    turnOrder.push(botId);
+    players[botId] = {
+      name: `다람쥐봇 ${i-1}호 🐿️`,
+      isHost: false,
+      emoji: playerDesigns[i-1]?.emoji || playerDesigns[0].emoji
+    };
+  }
+
+  const { stones, lastMove } = calculateInitialGameSetup(turnOrder, players);
+
+  roomState = {
+    roomId: roomId,
+    status: "playing",
+    hostId: myPlayerId,
+    players: players,
+    turnOrder: turnOrder,
+    currentTurnIndex: 0,
+    lastMove: lastMove,
+    stones: stones,
+    winner: null,
+    createdAt: Date.now()
+  };
+
+  showToast(`[교사 제어] ${roomId} 대기방을 ${pCount}인 모드로 즉시 시작합니다.`);
+  lobbyScreen.classList.remove('active');
+  gameScreen.classList.add('active');
+  
+  renderGameUI(roomState);
+  addSystemChatMessage(`[교사 제어] ${pCount}인 모드 게임이 원격 시작되었습니다!`);
+  addSystemChatMessage(`🐿️ 마지막 돌이 (${lastMove.x}, ${lastMove.y})에 배치되었습니다. 첫 턴 규칙이 활성화됩니다.`);
+};
 
 // 데이터를 바탕으로 차트 및 지표 렌더링
 function processAndRenderStats(logs) {
